@@ -1,12 +1,13 @@
 package main
 
 import (
-	"ddns/adapters"
 	"errors"
 	"log"
 	"os"
 	"runtime"
 	"time"
+
+	"github.com/ysmood/ddns/adapters"
 
 	"github.com/ysmood/myip"
 	"gopkg.in/alecthomas/kingpin.v2"
