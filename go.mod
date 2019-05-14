@@ -8,6 +8,6 @@ require (
 	github.com/stretchr/testify v1.2.2 // indirect
 	github.com/tidwall/gjson v1.1.3
 	github.com/tidwall/match v1.0.1 // indirect
-	github.com/ysmood/myip v0.0.0-20181126093052-5f3f26678293
+	github.com/ysmood/myip v0.0.0-20190514144300-6576fde8f6c5
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 )
