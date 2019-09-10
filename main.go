@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"log"
 	"os"
 	"runtime"
@@ -14,7 +13,7 @@ import (
 )
 
 type ddns struct {
-	token        *string
+	config       *string
 	domainName   *string
 	subDomain    *string
 	userPublicIP *bool
@@ -29,7 +28,7 @@ type ddns struct {
 
 func main() {
 	service := &ddns{
-		token:        kingpin.Flag("token", "").Short('t').Required().String(),
+		config:       kingpin.Flag("config", "the config for the adapter").Short('t').Required().String(),
 		domainName:   kingpin.Flag("domain-name", "").Short('d').Required().String(),
 		subDomain:    kingpin.Flag("sub-domain", "").Short('s').String(),
 		userPublicIP: kingpin.Flag("use-public-ip", "").Short('p').Bool(),
@@ -84,20 +83,9 @@ func (service *ddns) updateIP() (err error) {
 		return
 	}
 
-	var adapter adapters.Adapter
+	adapter := adapters.New(*service.adapter, *service.config)
 
-	switch *service.adapter {
-	case "dnspod":
-		adapter = adapters.NewDnspod(&adapters.Options{
-			DomainName: *service.domainName,
-			SubDomain:  *service.subDomain,
-			Token:      *service.token,
-		})
-	default:
-		return errors.New("adapter not supported")
-	}
-
-	err = adapter.SetRecord(ip)
+	err = adapter.SetRecord(*service.subDomain, *service.domainName, ip)
 
 	if err != nil {
 		return err
