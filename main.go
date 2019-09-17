@@ -1,70 +1,62 @@
 package main
 
 import (
-	"log"
-	"os"
-	"runtime"
+	"fmt"
 	"time"
 
 	"github.com/ysmood/ddns/adapters"
 
+	"github.com/ysmood/kit"
 	"github.com/ysmood/myip"
-	"gopkg.in/alecthomas/kingpin.v2"
 )
 
-type ddns struct {
-	config       *string
-	domainName   *string
-	subDomain    *string
-	userPublicIP *bool
-	adapter      *string
-	interval     *int
-
-	err *log.Logger
-	std *log.Logger
-
-	ip string
-}
-
 func main() {
-	service := &ddns{
-		config:       kingpin.Flag("config", "the config for the adapter").Short('t').Required().String(),
-		domainName:   kingpin.Flag("domain-name", "").Short('d').Required().String(),
-		subDomain:    kingpin.Flag("sub-domain", "").Short('s').String(),
-		userPublicIP: kingpin.Flag("use-public-ip", "").Short('p').Bool(),
-		adapter:      kingpin.Flag("adapter", "").Default("dnspod").String(),
-		interval:     kingpin.Flag("interval", "").Default("1").Int(),
+	app := kit.TasksNew("ddns", "a tool for automate dns setup").Version("0.0.2")
 
-		err: log.New(os.Stderr, "", log.LstdFlags),
-		std: log.New(os.Stdout, "", log.LstdFlags),
-	}
+	config := app.Flag("config", "the config for the adapter").Short('t').Required().String()
+	adapterName := app.Flag("adapter", "").Default("dnspod").String()
+	domainName := app.Flag("domain-name", "").Short('d').Required().String()
+	subDomain := app.Flag("sub-domain", "").Short('s').Required().String()
 
-	kingpin.Version("0.0.1")
-	kingpin.Parse()
+	kit.Tasks().App(app).Add(
+		kit.Task("run", "auto update dns").Init(func(cmd kit.TaskCmd) func() {
+			cmd.Default()
 
-	go service.run()
+			usePublicIP := cmd.Flag("use-public-ip", "").Short('p').Bool()
+			interval := cmd.Flag("interval", "").Default("10s").Duration()
 
-	runtime.Goexit()
+			return func() {
+				run(*interval, *usePublicIP, *adapterName, *config, *subDomain, *domainName)
+			}
+		}),
+		kit.Task("set", "set dns to ip").Init(func(cmd kit.TaskCmd) func() {
+			ip := cmd.Flag("ip", "ip address to set").Required().String()
+
+			return func() {
+				kit.E(setIP(*adapterName, *config, *subDomain, *domainName, *ip))
+			}
+		}),
+	).Do()
 }
 
-func (service *ddns) run() {
+func run(interval time.Duration, userPublicIP bool, adapterName, config, subDomain, domainName string) {
 	var err error
 
 	for {
-		err = service.updateIP()
+		err = updateIP(userPublicIP, adapterName, config, subDomain, domainName)
 
 		if err != nil {
-			service.err.Println(err)
+			kit.Err(err)
 		}
 
-		time.Sleep(time.Duration(*service.interval) * time.Second)
+		time.Sleep(interval * time.Second)
 	}
 }
 
-func (service *ddns) updateIP() (err error) {
-	var ip string
+func updateIP(userPublicIP bool, adapterName, config, subDomain, domainName string) (err error) {
+	var ip, lastIP string
 
-	if *service.userPublicIP {
+	if userPublicIP {
 		ip, err = myip.GetPublicIP()
 
 		if err != nil {
@@ -79,21 +71,27 @@ func (service *ddns) updateIP() (err error) {
 		}
 	}
 
-	if service.ip == ip {
+	if lastIP == ip {
 		return
 	}
 
-	adapter := adapters.New(*service.adapter, *service.config)
+	setIP(adapterName, config, subDomain, domainName, ip)
 
-	err = adapter.SetRecord(*service.subDomain, *service.domainName, ip)
+	lastIP = ip
+
+	return
+}
+
+func setIP(adapterName, config, subDomain, domainName, ip string) error {
+	adapter := adapters.New(adapterName, config)
+
+	err := adapter.SetRecord(subDomain, domainName, ip)
 
 	if err != nil {
 		return err
 	}
 
-	service.ip = ip
+	kit.Log(fmt.Sprintf("set ip: %s.%s -> %s\n", subDomain, domainName, ip))
 
-	service.std.Printf("set ip: %s.%s -> %s\n", *service.subDomain, *service.domainName, ip)
-
-	return
+	return nil
 }
