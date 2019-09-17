@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	app := kit.TasksNew("ddns", "a tool for automate dns setup").Version("0.0.2")
+	app := kit.TasksNew("ddns", "a tool for automate dns setup").Version("0.0.3")
 
 	config := app.Flag("config", "the config for the adapter").Short('t').Required().String()
 	adapterName := app.Flag("adapter", "").Default("dnspod").String()
@@ -49,7 +49,7 @@ func run(interval time.Duration, userPublicIP bool, adapterName, config, subDoma
 			kit.Err(err)
 		}
 
-		time.Sleep(interval * time.Second)
+		time.Sleep(interval)
 	}
 }
 
