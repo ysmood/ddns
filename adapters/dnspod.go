@@ -62,7 +62,7 @@ func (pod *Dnspod) getRecordID(subDomain, domainName string) (string, error) {
 	return data.Get("records.0.id").String(), nil
 }
 
-func (pod *Dnspod) req(path string, params ...interface{}) (*kit.JSONResult, error) {
+func (pod *Dnspod) req(path string, params ...interface{}) (kit.JSONResult, error) {
 	params = append(params, "login_token", pod.token, "format", "json")
 
 	data, err := kit.Req("https://dnsapi.cn/" + path).Post().Form(params...).JSON()
