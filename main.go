@@ -11,12 +11,12 @@ import (
 )
 
 func main() {
-	app := kit.TasksNew("ddns", "a tool for automate dns setup").Version("0.2.1")
+	app := kit.TasksNew("ddns", "a tool for automate dns setup").Version("0.2.2")
 
 	config := app.Flag("config", "the config for the adapter").Short('t').Required().String()
 	adapterName := app.Flag("adapter", "").Default("dnspod").String()
 	domainName := app.Flag("domain-name", "").Short('d').Required().String()
-	subDomain := app.Flag("sub-domain", "").Short('s').Default("").String()
+	subDomain := app.Flag("sub-domain", "").Short('s').Default("@").String()
 
 	kit.Tasks().App(app).Add(
 		kit.Task("run", "auto update dns").Init(func(cmd kit.TaskCmd) func() {
