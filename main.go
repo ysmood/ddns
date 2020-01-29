@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	app := kit.TasksNew("ddns", "a tool for automate dns setup").Version("0.2.0")
+	app := kit.TasksNew("ddns", "a tool for automate dns setup").Version("0.2.1")
 
 	config := app.Flag("config", "the config for the adapter").Short('t').Required().String()
 	adapterName := app.Flag("adapter", "").Default("dnspod").String()
@@ -75,7 +75,10 @@ func updateIP(userPublicIP bool, adapterName, config, subDomain, domainName stri
 		return
 	}
 
-	setIP(adapterName, config, subDomain, domainName, ip)
+	err = setIP(adapterName, config, subDomain, domainName, ip)
+	if err != nil {
+		return err
+	}
 
 	lastIP = ip
 
