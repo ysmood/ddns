@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	app := kit.TasksNew("ddns", "a tool for automate dns setup").Version("0.2.2")
+	app := kit.TasksNew("ddns", "a tool for automate dns setup").Version("v0.2.2")
 
 	config := app.Flag("config", "the config for the adapter").Short('t').Required().String()
 	adapterName := app.Flag("adapter", "").Default("dnspod").String()
