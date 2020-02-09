@@ -5,13 +5,12 @@ import (
 	"time"
 
 	"github.com/ysmood/ddns/adapters"
-
 	"github.com/ysmood/kit"
 	"github.com/ysmood/myip"
 )
 
 func main() {
-	app := kit.TasksNew("ddns", "a tool for automate dns setup").Version("v0.2.2")
+	app := kit.TasksNew("ddns", "a tool for automate dns setup").Version("v0.2.3")
 
 	config := app.Flag("config", "the config for the adapter").Short('t').Required().String()
 	adapterName := app.Flag("adapter", "").Default("dnspod").String()
@@ -40,11 +39,10 @@ func main() {
 }
 
 func run(interval time.Duration, userPublicIP bool, adapterName, config, subDomain, domainName string) {
-	var err error
-
+	lastIP := ""
 	for {
-		err = updateIP(userPublicIP, adapterName, config, subDomain, domainName)
-
+		var err error
+		lastIP, err = updateIP(userPublicIP, lastIP, adapterName, config, subDomain, domainName)
 		if err != nil {
 			kit.Err(err)
 		}
@@ -53,35 +51,30 @@ func run(interval time.Duration, userPublicIP bool, adapterName, config, subDoma
 	}
 }
 
-func updateIP(userPublicIP bool, adapterName, config, subDomain, domainName string) (err error) {
-	var ip, lastIP string
-
-	if userPublicIP {
-		ip, err = myip.GetPublicIP()
-
-		if err != nil {
-			return err
-		}
-
-	} else {
-		ip, err = myip.GetInterfaceIP()
-
-		if err != nil {
-			return err
-		}
+func updateIP(publicIP bool, lastIP, adapterName, config, subDomain, domainName string) (string, error) {
+	ip, err := getIP(publicIP)
+	if err != nil {
+		return "", err
 	}
 
-	if lastIP == ip {
-		return
+	if ip == lastIP {
+		return lastIP, nil
 	}
 
 	err = setIP(adapterName, config, subDomain, domainName, ip)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	lastIP = ip
+	return ip, nil
+}
 
+func getIP(public bool) (ip string, err error) {
+	if public {
+		ip, err = myip.GetPublicIP()
+	} else {
+		ip, err = myip.GetInterfaceIP()
+	}
 	return
 }
 
@@ -89,12 +82,10 @@ func setIP(adapterName, config, subDomain, domainName, ip string) error {
 	adapter := adapters.New(adapterName, config)
 
 	err := adapter.SetRecord(subDomain, domainName, ip)
-
 	if err != nil {
 		return err
 	}
 
-	kit.Log(fmt.Sprintf("set ip: %s.%s -> %s\n", subDomain, domainName, ip))
-
+	kit.Log(fmt.Sprintf("[ddns] set ip: %s.%s -> %s\n", subDomain, domainName, ip))
 	return nil
 }
