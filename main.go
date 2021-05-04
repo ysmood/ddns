@@ -12,6 +12,7 @@ import (
 	"github.com/ysmood/myip"
 )
 
+// Service ...
 type Service struct {
 	Domain      string
 	SubDomain   string
@@ -24,12 +25,15 @@ type Service struct {
 	AdapterConfig gson.JSON
 }
 
+// Duration ...
 type Duration time.Duration
 
+// MarshalJSON ...
 func (d Duration) MarshalJSON() ([]byte, error) {
 	return json.Marshal(time.Duration(d).String())
 }
 
+// UnmarshalJSON ...
 func (d *Duration) UnmarshalJSON(b []byte) error {
 	var v interface{}
 	if err := json.Unmarshal(b, &v); err != nil {
