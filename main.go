@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"io"
 	"log"
 	"os"
 	"time"
@@ -16,6 +17,7 @@ type Service struct {
 	SubDomain   string
 	UsePublicIP bool
 	Interval    Duration
+	Log         bool
 
 	// check adapters.New
 	AdapterName   string
@@ -61,17 +63,17 @@ func (s *Service) run() {
 	lastIP := ""
 	for {
 		var err error
-		lastIP, err = updateIP(s.UsePublicIP, lastIP, s.AdapterName, s.AdapterConfig, s.SubDomain, s.Domain)
+		lastIP, err = s.updateIP(lastIP)
 		if err != nil {
-			panic(err)
+			log.Println(err)
 		}
 
 		time.Sleep(time.Duration(s.Interval))
 	}
 }
 
-func updateIP(publicIP bool, lastIP, adapterName string, config gson.JSON, subDomain, domainName string) (string, error) {
-	ip, err := getIP(publicIP)
+func (s *Service) updateIP(lastIP string) (string, error) {
+	ip, err := s.getIP()
 	if err != nil {
 		return "", err
 	}
@@ -80,7 +82,7 @@ func updateIP(publicIP bool, lastIP, adapterName string, config gson.JSON, subDo
 		return lastIP, nil
 	}
 
-	err = setIP(adapterName, config, subDomain, domainName, ip)
+	err = s.setIP(ip)
 	if err != nil {
 		return "", err
 	}
@@ -88,8 +90,8 @@ func updateIP(publicIP bool, lastIP, adapterName string, config gson.JSON, subDo
 	return ip, nil
 }
 
-func getIP(public bool) (ip string, err error) {
-	if public {
+func (s *Service) getIP() (ip string, err error) {
+	if s.UsePublicIP {
 		ip, err = myip.GetPublicIP()
 	} else {
 		ip, err = myip.GetInterfaceIP()
@@ -97,14 +99,18 @@ func getIP(public bool) (ip string, err error) {
 	return
 }
 
-func setIP(adapterName string, config gson.JSON, subDomain, domainName, ip string) error {
-	adapter := adapters.New(adapterName, config)
+func (s *Service) setIP(ip string) error {
+	l := log.New(io.Discard, "", 0)
+	if s.Log {
+		l = log.Default()
+	}
 
-	err := adapter.SetRecord(subDomain, domainName, ip)
+	adapter := adapters.New(s.AdapterName, s.AdapterConfig, l)
+
+	err := adapter.SetRecord(s.SubDomain, s.Domain, ip)
 	if err != nil {
 		return err
 	}
 
-	log.Printf("[ddns] set ip: %s.%s -> %s\n", subDomain, domainName, ip)
 	return nil
 }

@@ -2,6 +2,7 @@ package adapters
 
 import (
 	"bytes"
+	"log"
 	"net/http"
 	"net/url"
 
@@ -13,6 +14,7 @@ var _ Adapter = &Dnspod{}
 // Dnspod ...
 type Dnspod struct {
 	token string
+	log   *log.Logger
 }
 
 // Err ...
@@ -28,10 +30,11 @@ func (e *Err) Error() string {
 // SetRecord ...
 func (pod *Dnspod) SetRecord(subDomain, domainName, ip string) error {
 	recordID, err := pod.getRecordID(subDomain, domainName)
-
 	if err != nil {
 		return err
 	}
+
+	pod.log.Println("Record.Modify", subDomain, domainName, ip)
 
 	_, err = pod.req("Record.Modify", &url.Values{
 		"sub_domain":  {subDomain},
@@ -46,6 +49,8 @@ func (pod *Dnspod) SetRecord(subDomain, domainName, ip string) error {
 }
 
 func (pod *Dnspod) getRecordID(subDomain, domainName string) (string, error) {
+	pod.log.Println("Record.List", subDomain, domainName)
+
 	data, err := pod.req("Record.List", &url.Values{
 		"sub_domain": {subDomain},
 		"domain":     {domainName},
@@ -53,6 +58,8 @@ func (pod *Dnspod) getRecordID(subDomain, domainName string) (string, error) {
 
 	if err != nil {
 		if e, ok := err.(*Err); ok && e.Get("code").Str() == "10" {
+			pod.log.Println("Record.Create", subDomain, domainName)
+
 			data, err = pod.req("Record.Create", &url.Values{
 				"sub_domain":  {subDomain},
 				"domain":      {domainName},

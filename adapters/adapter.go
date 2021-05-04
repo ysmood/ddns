@@ -1,6 +1,8 @@
 package adapters
 
 import (
+	"log"
+
 	"github.com/ysmood/gson"
 )
 
@@ -11,10 +13,10 @@ type Adapter interface {
 }
 
 // New ...
-func New(adapterName string, config gson.JSON) (adapter Adapter) {
+func New(adapterName string, config gson.JSON, log *log.Logger) (adapter Adapter) {
 	switch adapterName {
 	case "dnspod":
-		adapter = &Dnspod{token: config.Get("token").Str()}
+		adapter = &Dnspod{token: config.Get("token").Str(), log: log}
 	}
 
 	return
