@@ -1,5 +1,9 @@
 package adapters
 
+import (
+	"github.com/ysmood/gson"
+)
+
 // Adapter ...
 type Adapter interface {
 	// SetRecord ...
@@ -7,10 +11,10 @@ type Adapter interface {
 }
 
 // New ...
-func New(adapterName, config string) (adapter Adapter) {
+func New(adapterName string, config gson.JSON) (adapter Adapter) {
 	switch adapterName {
 	case "dnspod":
-		adapter = &Dnspod{token: config}
+		adapter = &Dnspod{token: config.Get("token").Str()}
 	}
 
 	return

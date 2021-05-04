@@ -1,17 +1,29 @@
 package adapters
 
 import (
-	"errors"
+	"bytes"
+	"net/http"
+	"net/url"
 
-	"github.com/ysmood/kit"
+	"github.com/ysmood/gson"
 )
+
+var _ Adapter = &Dnspod{}
 
 // Dnspod ...
 type Dnspod struct {
 	token string
 }
 
-var _ Adapter = &Dnspod{}
+// Err ...
+type Err struct {
+	gson.JSON
+}
+
+// Error ...
+func (e *Err) Error() string {
+	return e.JSON.JSON("", "")
+}
 
 // SetRecord ...
 func (pod *Dnspod) SetRecord(subDomain, domainName, ip string) error {
@@ -21,57 +33,67 @@ func (pod *Dnspod) SetRecord(subDomain, domainName, ip string) error {
 		return err
 	}
 
-	_, err = pod.req("Record.Modify",
-		"sub_domain", subDomain,
-		"domain", domainName,
-		"record_id", recordID,
-		"record_type", "A",
-		"record_line", "默认",
-		"value", ip,
-	)
+	_, err = pod.req("Record.Modify", &url.Values{
+		"sub_domain":  {subDomain},
+		"domain":      {domainName},
+		"record_id":   {recordID},
+		"record_type": {"A"},
+		"record_line": {"默认"},
+		"value":       {ip},
+	})
 
 	return err
 }
 
 func (pod *Dnspod) getRecordID(subDomain, domainName string) (string, error) {
-	data, err := pod.req("Record.List",
-		"sub_domain", subDomain,
-		"domain", domainName,
-	)
+	data, err := pod.req("Record.List", &url.Values{
+		"sub_domain": {subDomain},
+		"domain":     {domainName},
+	})
 
 	if err != nil {
-		if err.Error() == "No records" {
-			data, err = pod.req("Record.Create",
-				"sub_domain", subDomain,
-				"domain", domainName,
-				"record_type", "A",
-				"record_line", "默认",
-				"value", "0.0.0.0",
-			)
+		if e, ok := err.(*Err); ok && e.Get("code").Str() == "10" {
+			data, err = pod.req("Record.Create", &url.Values{
+				"sub_domain":  {subDomain},
+				"domain":      {domainName},
+				"record_type": {"A"},
+				"record_line": {"默认"},
+				"value":       {"0.0.0.0"},
+			})
 
 			if err != nil {
 				return "", err
 			}
 
-			return data.Get("record.id").String(), nil
+			return data.Get("record.id").Str(), nil
 		}
 
 		return "", err
 	}
 
-	return data.Get("records.0.id").String(), nil
+	return data.Get("records.0.id").Str(), nil
 }
 
-func (pod *Dnspod) req(path string, params ...interface{}) (kit.JSONResult, error) {
-	params = append(params, "login_token", pod.token, "format", "json")
+func (pod *Dnspod) req(path string, params *url.Values) (gson.JSON, error) {
+	params.Add("login_token", pod.token)
+	params.Add("format", "json")
+	body := bytes.NewBufferString(params.Encode())
 
-	data, err := kit.Req("https://dnsapi.cn/" + path).Post().Form(params...).JSON()
+	req, err := http.NewRequest(http.MethodPost, "https://dnsapi.cn/"+path, body)
 	if err != nil {
-		return nil, err
+		return gson.JSON{}, err
 	}
 
-	if data.Get("status.code").String() != "1" {
-		return data, errors.New(data.Get("status.message").String())
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return gson.JSON{}, err
+	}
+
+	data := gson.New(res.Body)
+	if data.Get("status.code").Str() != "1" {
+		return data, &Err{data.Get("status")}
 	}
 
 	return data, err

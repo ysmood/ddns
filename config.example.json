@@ -1,0 +1,10 @@
+{
+    "Domain": "ysmood.org",
+    "SubDomain": "test",
+    "UsePublicIP": true,
+    "Interval": "60s",
+    "AdapterName": "dnspod",
+    "AdapterConfig": {
+        "token": "secrets"
+    }
+}

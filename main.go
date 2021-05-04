@@ -1,57 +1,76 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
+	"log"
+	"os"
 	"time"
 
 	"github.com/ysmood/ddns/adapters"
-	"github.com/ysmood/kit"
+	"github.com/ysmood/gson"
 	"github.com/ysmood/myip"
 )
 
-func main() {
-	app := kit.TasksNew("ddns", "a tool for automate dns setup").Version("v0.2.3")
+type Service struct {
+	Domain      string
+	SubDomain   string
+	UsePublicIP bool
+	Interval    Duration
 
-	config := app.Flag("config", "the config for the adapter").Short('t').Required().String()
-	adapterName := app.Flag("adapter", "").Default("dnspod").String()
-	domainName := app.Flag("domain-name", "").Short('d').Required().String()
-	subDomain := app.Flag("sub-domain", "").Short('s').Default("@").String()
-
-	kit.Tasks().App(app).Add(
-		kit.Task("run", "auto update dns").Init(func(cmd kit.TaskCmd) func() {
-			cmd.Default()
-
-			usePublicIP := cmd.Flag("use-public-ip", "").Short('p').Bool()
-			interval := cmd.Flag("interval", "").Default("10s").Duration()
-
-			return func() {
-				run(*interval, *usePublicIP, *adapterName, *config, *subDomain, *domainName)
-			}
-		}),
-		kit.Task("set", "set dns to ip").Init(func(cmd kit.TaskCmd) func() {
-			ip := cmd.Flag("ip", "ip address to set").Required().String()
-
-			return func() {
-				kit.E(setIP(*adapterName, *config, *subDomain, *domainName, *ip))
-			}
-		}),
-	).Do()
+	// check adapters.New
+	AdapterName   string
+	AdapterConfig gson.JSON
 }
 
-func run(interval time.Duration, userPublicIP bool, adapterName, config, subDomain, domainName string) {
+type Duration time.Duration
+
+func (d Duration) MarshalJSON() ([]byte, error) {
+	return json.Marshal(time.Duration(d).String())
+}
+
+func (d *Duration) UnmarshalJSON(b []byte) error {
+	var v interface{}
+	if err := json.Unmarshal(b, &v); err != nil {
+		return err
+	}
+	tmp, err := time.ParseDuration(v.(string))
+	if err != nil {
+		return err
+	}
+	*d = Duration(tmp)
+	return nil
+}
+
+func main() {
+	b, err := os.ReadFile(os.Args[1])
+	if err != nil {
+		panic(err)
+	}
+
+	s := Service{}
+
+	err = json.Unmarshal(b, &s)
+	if err != nil {
+		panic(err)
+	}
+
+	s.run()
+}
+
+func (s *Service) run() {
 	lastIP := ""
 	for {
 		var err error
-		lastIP, err = updateIP(userPublicIP, lastIP, adapterName, config, subDomain, domainName)
+		lastIP, err = updateIP(s.UsePublicIP, lastIP, s.AdapterName, s.AdapterConfig, s.SubDomain, s.Domain)
 		if err != nil {
-			kit.Err(err)
+			panic(err)
 		}
 
-		time.Sleep(interval)
+		time.Sleep(time.Duration(s.Interval))
 	}
 }
 
-func updateIP(publicIP bool, lastIP, adapterName, config, subDomain, domainName string) (string, error) {
+func updateIP(publicIP bool, lastIP, adapterName string, config gson.JSON, subDomain, domainName string) (string, error) {
 	ip, err := getIP(publicIP)
 	if err != nil {
 		return "", err
@@ -78,7 +97,7 @@ func getIP(public bool) (ip string, err error) {
 	return
 }
 
-func setIP(adapterName, config, subDomain, domainName, ip string) error {
+func setIP(adapterName string, config gson.JSON, subDomain, domainName, ip string) error {
 	adapter := adapters.New(adapterName, config)
 
 	err := adapter.SetRecord(subDomain, domainName, ip)
@@ -86,6 +105,6 @@ func setIP(adapterName, config, subDomain, domainName, ip string) error {
 		return err
 	}
 
-	kit.Log(fmt.Sprintf("[ddns] set ip: %s.%s -> %s\n", subDomain, domainName, ip))
+	log.Printf("[ddns] set ip: %s.%s -> %s\n", subDomain, domainName, ip)
 	return nil
 }
