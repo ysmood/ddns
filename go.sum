@@ -2,5 +2,5 @@ github.com/ysmood/got v0.12.0 h1:Ol4cpy6Xdq1KCjPlWSA+tvekrnt9cV6LIw+Jvx0dj4M=
 github.com/ysmood/got v0.12.0/go.mod h1:pE1l4LOwOBhQg6A/8IAatkGp7uZjnalzrZolnlhhMgY=
 github.com/ysmood/gson v0.6.4 h1:Yb6tosv6bk59HqjZu2/7o4BFherpYEMkDkXmlhgryZ4=
 github.com/ysmood/gson v0.6.4/go.mod h1:3Kzs5zDl21g5F/BlLTNcuAGAYLKt2lV5G8D1zF3RNmg=
-github.com/ysmood/myip v1.0.1 h1:V9nHtZCd69eBmm+IcDVePFmfXN35dmyiH74U8nO6MwI=
-github.com/ysmood/myip v1.0.1/go.mod h1:620KJ4ONfqT5SLuJKTZRzYdKvNtFFro+afFlF2jW1N4=
+github.com/ysmood/myip v1.0.2 h1:AIUsBUB6wxk8m62SuaGaComNGz6+hIs+lcmwfvPkI0I=
+github.com/ysmood/myip v1.0.2/go.mod h1:620KJ4ONfqT5SLuJKTZRzYdKvNtFFro+afFlF2jW1N4=

@@ -92,9 +92,9 @@ func (s *Service) updateIP(lastIP string) (string, error) {
 
 func (s *Service) getIP() (ip string, err error) {
 	if s.UsePublicIP {
-		ip, err = myip.GetPublicIP()
+		ip, err = myip.New().GetPublicIP()
 	} else {
-		ip, err = myip.GetInterfaceIP()
+		ip, err = myip.New().GetInterfaceIP()
 	}
 	return
 }
